@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { currentMonthKey, dateKeyInTz, shiftMonthKey } from "@/lib/calendar";
 import { formatDateLabel, formatDuration, formatLocalTime, formatPrice } from "@/lib/format";
+import { MonthCalendar } from "./MonthCalendar";
 
 type ServicePublic = {
   id: string;
@@ -27,27 +29,6 @@ type Availability = {
   dates: Array<{ date: string; slots: Array<{ start: string; end: string }> }>;
 };
 
-/** "yyyy-MM-dd" in the given IANA timezone. */
-function dateStrInTz(d: Date, tz: string): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: tz,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
-}
-
-function daysInRange(from: string, to: string, tz: string): string[] {
-  const out: string[] = [];
-  const cursor = new Date(from);
-  const end = new Date(to);
-  while (cursor <= end) {
-    out.push(dateStrInTz(cursor, tz));
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
-  }
-  return [...new Set(out)];
-}
-
 export function BookingWizard({
   business,
   services,
@@ -62,6 +43,13 @@ export function BookingWizard({
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  // Browsed month ("yyyy-MM", business-local). Lives here so it survives the
+  // loading gate, service switches and 409 refetches. Lazily initialized; the
+  // grid is only rendered in the post-fetch (client-side) branch, so
+  // month-dependent output is never server-rendered.
+  const [visibleMonth, setVisibleMonth] = useState<string>(() =>
+    currentMonthKey(business.timezone, new Date()),
+  );
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -78,7 +66,7 @@ export function BookingWizard({
       if (!serviceId) return;
       try {
         const res = await fetch(
-          `/api/businesses/${business.slug}/availability?serviceId=${serviceId}&days=14`,
+          `/api/businesses/${business.slug}/availability?serviceId=${serviceId}&days=60`,
         );
         if (cancelled) return;
         if (!res.ok) {
@@ -105,15 +93,20 @@ export function BookingWizard({
     return map;
   }, [availability]);
 
-  const dateList = useMemo(
-    () =>
-      availability
-        ? daysInRange(availability.from, availability.to, availability.timezone)
-        : [],
-    [availability],
-  );
+  const slotCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const d of availability?.dates ?? []) map.set(d.date, d.slots.length);
+    return map;
+  }, [availability]);
 
   const selectedSlots = selectedDate ? (slotsByDate.get(selectedDate) ?? []) : [];
+
+  // Business-local "now" and the end of the bookable window (render-time
+  // compute; only consumed by the post-fetch client-side render).
+  const todayKey = dateKeyInTz(new Date(), business.timezone);
+  const windowEndKey = availability
+    ? dateKeyInTz(new Date(availability.to), availability.timezone)
+    : todayKey;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -192,30 +185,29 @@ export function BookingWizard({
         ) : loadError ? (
           <p className="mt-3 text-sm text-red-600">{loadError}</p>
         ) : (
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
-            {dateList.map((date) => {
-              const hasSlots = (slotsByDate.get(date)?.length ?? 0) > 0;
-              return (
-                <button
-                  key={date}
-                  type="button"
-                  disabled={!hasSlots}
-                  onClick={() => {
-                    setSelectedDate(date);
-                    setSelectedSlot(null);
-                  }}
-                  className={`min-w-28 shrink-0 rounded-lg border px-3 py-2 text-sm transition ${
-                    selectedDate === date
-                      ? "border-zinc-900 bg-zinc-900 text-white"
-                      : hasSlots
-                        ? "border-zinc-200 hover:border-zinc-400"
-                        : "cursor-not-allowed border-zinc-100 text-zinc-300"
-                  }`}
-                >
-                  {formatDateLabel(date)}
-                </button>
-              );
-            })}
+          <div className="mt-3">
+            <p className="text-xs text-zinc-400">
+              All dates shown in the business&apos;s timezone ({business.timezone})
+            </p>
+            <div className="mt-2">
+              <MonthCalendar
+                monthKey={visibleMonth}
+                timezone={business.timezone}
+                todayKey={todayKey}
+                windowEndKey={windowEndKey}
+                selectedDate={selectedDate}
+                slotCountByDate={slotCounts}
+                onSelect={(date) => {
+                  setSelectedDate(date);
+                  setSelectedSlot(null);
+                }}
+                onPrevMonth={() => setVisibleMonth((m) => shiftMonthKey(m, -1))}
+                onNextMonth={() => setVisibleMonth((m) => shiftMonthKey(m, 1))}
+                onToday={() =>
+                  setVisibleMonth(currentMonthKey(business.timezone, new Date()))
+                }
+              />
+            </div>
           </div>
         )}
       </section>

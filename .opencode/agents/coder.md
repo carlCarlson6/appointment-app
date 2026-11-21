@@ -11,6 +11,30 @@ permissions:
   - action: question
     resource: "*"
     effect: deny
+  - action: skill
+    resource: "*"
+    effect: deny
+  - action: skill
+    resource: clerk-nextjs-patterns
+    effect: allow
+  - action: skill
+    resource: clerk-custom-ui
+    effect: allow
+  - action: skill
+    resource: clerk-webhooks
+    effect: allow
+  - action: skill
+    resource: clerk-orgs
+    effect: allow
+  - action: skill
+    resource: clerk-setup
+    effect: allow
+  - action: skill
+    resource: vitest
+    effect: allow
+  - action: skill
+    resource: vercel-react-best-practices
+    effect: allow
   - action: shell
     resource: "git push *"
     effect: deny
@@ -90,6 +114,22 @@ absolute worktree path, and optionally reviewer/tester `REPORT`s to fix.
    - **How to verify** — steps a human or the tester can follow.
 7. On reviewer/tester `REPORT`s: apply only the requested fixes, then return
    an updated change report.
+
+## Skills
+
+You may load only these skills (others are blocked by permissions). Load the
+relevant one(s) BEFORE implementing in their area:
+
+- `clerk-nextjs-patterns` — Clerk + Next.js work (middleware/proxy, server
+  actions, auth helpers, caching).
+- `clerk-custom-ui` — changes to the custom sign-in/sign-up pages or auth
+  theming.
+- `clerk-webhooks` — user sync or event-driven features.
+- `clerk-orgs` — multi-tenant/B2B features.
+- `clerk-setup` — Clerk infrastructure changes.
+- `vitest` — always load before writing or adjusting tests.
+- `vercel-react-best-practices` — before writing React components or
+  data-fetching code.
 
 ## Rules
 

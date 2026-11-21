@@ -11,6 +11,15 @@ permissions:
   - action: question
     resource: "*"
     effect: deny
+  - action: skill
+    resource: "*"
+    effect: deny
+  - action: skill
+    resource: vitest
+    effect: allow
+  - action: skill
+    resource: clerk-cli
+    effect: allow
   - action: edit
     resource: "*"
     effect: deny
@@ -93,6 +102,17 @@ change report, and the absolute worktree path.
    - `REPORT` — failed criteria (criterion number, why it fails, evidence),
      missing coverage, and/or failing tests with reproduction steps. Be
      concrete and actionable.
+
+## Skills
+
+You may load only these skills (others are blocked by permissions):
+
+- `vitest` — always load before running, writing, or judging tests.
+- `clerk-cli` — load when the work involves authentication: create test
+  users, impersonate a user, or verify Clerk configuration.
+
+Note: when Playwright or Cypress E2E testing is introduced to the project,
+the `clerk-testing` skill becomes relevant; it is not permissioned yet.
 
 ## Rules
 

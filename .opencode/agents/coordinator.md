@@ -29,6 +29,18 @@ permissions:
   - action: execute
     resource: "*"
     effect: deny
+  - action: skill
+    resource: "*"
+    effect: deny
+  - action: skill
+    resource: opencode
+    effect: allow
+  - action: skill
+    resource: find-skills
+    effect: allow
+  - action: skill
+    resource: clerk-cli
+    effect: allow
   - action: shell
     resource: "git push --force *"
     effect: deny
@@ -122,6 +134,18 @@ Report the PR URL to the user.
 
 **Step 10 — Cleanup.** `git worktree remove ../appointment-app-<slug>`
 (never `--force`). If removal fails, leave it in place and tell the user.
+
+## Skills
+
+You may load only these skills (others are blocked by permissions):
+
+- `opencode` — load when unsure about harness mechanics: worktrees, subagents,
+  agent permissions, or OpenCode configuration.
+- `clerk-cli` — load during preflight and verification: `clerk doctor`,
+  instance/env checks, and creating or impersonating test users when a task
+  touches authentication.
+- `find-skills` — load when the user asks whether a capability exists as a
+  skill, or when a task area has no matching skill in this list.
 
 ## Hard rules
 

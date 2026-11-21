@@ -14,6 +14,18 @@ permissions:
   - action: question
     resource: "*"
     effect: deny
+  - action: skill
+    resource: "*"
+    effect: deny
+  - action: skill
+    resource: vercel-react-best-practices
+    effect: allow
+  - action: skill
+    resource: vitest
+    effect: allow
+  - action: skill
+    resource: clerk-nextjs-patterns
+    effect: allow
   - action: shell
     resource: "*"
     effect: deny
@@ -53,6 +65,18 @@ worktree path.
    - `PASS` plus a 1–3 sentence summary of what was reviewed and why it is sound.
    - `REPORT` — findings in severity order, each with: file + location, the
      problem, why it matters, and a concrete suggested fix.
+
+## Skills
+
+You may load only these skills (others are blocked by permissions). Use them
+as review checklists for the diff:
+
+- `vercel-react-best-practices` — checklist for React/Next.js performance and
+  patterns.
+- `vitest` — checklist for test quality (assertions, isolation, edge-case
+  coverage).
+- `clerk-nextjs-patterns` — checklist when the diff touches Clerk auth code
+  (middleware, sessions, auth helpers).
 
 ## Rules
 

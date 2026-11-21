@@ -1,5 +1,5 @@
 ---
-description: "Runs the full agentic dev loop: plans, approves, codes, reviews, tests, commits, pushes, and opens the PR. Orchestrator only — it never edits code."
+description: "Runs the full agentic dev loop: plan approval, implementation, review and test gates, final user approval, commit, push, and PR. Orchestrator only — it never edits code."
 mode: all
 permissions:
   - action: subagent
@@ -127,12 +127,21 @@ Each returns exactly `PASS` or `REPORT`.
   scope, new requirements) → send to `planner` (revisit counter +1, max 3)
   → back to Step 4 and re-approval at Step 5.
 
-**Step 9 — Ship.** Inside the worktree: `git add -A`, commit
+**Step 9 — Final user approval.** Present the user with a summary of the
+implementation: the change report, both gate verdicts, and how to verify.
+WAIT for an explicit decision.
+- Approved → Step 10.
+- Changes requested → send the request to `planner` (revisit counter +1,
+  max 3) → back to Step 4 and re-approval at Step 5, then run the full loop
+  again (coder, gates, final approval) on the same worktree.
+- Aborted → clean up the worktree and stop.
+
+**Step 10 — Ship.** Inside the worktree: `git add -A`, commit
 (message: `<slug>: <summary>`; body: summary of the change report),
 `git push -u origin dev-loop/<slug>`, then `gh pr create --fill`.
 Report the PR URL to the user.
 
-**Step 10 — Cleanup.** `git worktree remove ../appointment-app-<slug>`
+**Step 11 — Cleanup.** `git worktree remove ../appointment-app-<slug>`
 (never `--force`). If removal fails, leave it in place and tell the user.
 
 ## Skills
@@ -149,14 +158,17 @@ You may load only these skills (others are blocked by permissions):
 
 ## Hard rules
 
-- Never commit, push, or open a PR unless BOTH gates returned `PASS`.
-- Never assume user approval of a plan — always wait for it.
+- Never commit, push, or open a PR unless BOTH gates returned `PASS` AND the
+  user approved the final summary (Step 9).
+- Never assume user approval — of the plan (Step 5) or of the result
+  (Step 9) — always wait for it.
 - Never edit code yourself; every change goes through the coder subagent.
 - Subagents have fresh context. Every subagent prompt must include: the repo
   root, the absolute worktree path, and the full text of everything the
   subagent needs (plan, change reports, revision feedback).
 - Iteration counters (plan revisions, coder fixes, plan revisits) cap at 3
-  each. On cap: stop the loop, summarize all reports for the user, and ask
+  each; changes requested at final approval (Step 9) count as plan revisits.
+  On cap: stop the loop, summarize all reports for the user, and ask
   how to proceed (retry, abort, or manual intervention).
 - Escalate instead of improvising: if a subagent fails, returns nonsense, or
   the loop seems stuck, report to the user with what you know.
